@@ -1,8 +1,8 @@
 <h1 align="center">pinchtab-mcp</h1>
 
 <p align="center">
-  <strong><a href="https://github.com/pinchtab/pinchtab">PinchTab</a> 用 MCP サーバー — AIエージェントのためのブラウザ自動化</strong><br/>
-  OpenCode、Cursor、Claude Desktop、その他あらゆる MCP 対応クライアントで動作
+  <strong><a href="https://github.com/pinchtab/pinchtab">PinchTab</a> を MCP ツール化する stdio サーバー</strong><br/>
+  OpenCode / Cursor / Claude Desktop など MCP 対応クライアントで使える
 </p>
 
 <p align="center">
@@ -14,11 +14,11 @@
 
 ---
 
-## これは何？
+## 概要
 
-[PinchTab](https://github.com/pinchtab/pinchtab) は、HTTP API 経由で AI エージェントに Chrome ブラウザの完全な制御を提供するスタンドアロンの Go バイナリです。トークン効率が高く、ヘッドレス対応で、永続的なブラウザプロファイルをサポートしています。
+[PinchTab](https://github.com/pinchtab/pinchtab) は Chrome をHTTP APIで操作できるGoバイナリ。トークン効率が良く、ヘッドレスもプロファイル永続化もいける。
 
-**pinchtab-mcp** は、PinchTab の HTTP API をラップする軽量な [Model Context Protocol](https://modelcontextprotocol.io)（MCP）stdio サーバーです。MCP 対応の AI コーディングエージェントやチャットクライアントで、標準的な MCP ツールとして利用できます。
+**pinchtab-mcp** はその HTTP API を [MCP](https://modelcontextprotocol.io)（stdio）でラップしたもの。AIエージェントから MCP ツールとしてブラウザを叩ける。
 
 ```
 AI クライアント (OpenCode / Cursor / Claude Desktop)
@@ -27,72 +27,72 @@ AI クライアント (OpenCode / Cursor / Claude Desktop)
   pinchtab-mcp  ──HTTP──▶  PinchTab :9867  ──CDP──▶  Chrome
 ```
 
-### なぜ別の MCP ラッパーが必要なのか？
+### なぜラッパーが要るのか
 
-PinchTab は標準的な HTTP API を提供しています。一方、MCP クライアントは JSON-RPC を使って stdin/stdout で通信します。このサーバーは両者を橋渡しし、以下を追加します：
+PinchTab は HTTP API、MCP クライアントは stdin/stdout の JSON-RPC。このサーバーがその間を埋める。
 
-- 統一された `action` パラメータを持つ単一の `pinchtab` ツール — コンテキストの肥大化を最小限に
-- Zod による型付きバリデーション付き入力
-- 認証トークンの転送、タイムアウト設定
-- スクリーンショットを MCP 画像コンテンツ（base64 JPEG）として返却
+- `action` パラメータ1つで全操作 → コンテキスト消費を抑える
+- Zod でバリデーション
+- 認証トークン転送・タイムアウト設定
+- スクリーンショットは base64 JPEG で返す
 
 ---
 
-## 前提条件
+## 必要なもの
 
 | 要件 | 備考 |
 |------|------|
 | **Node.js >= 18** | MCP サーバーの実行に必要 |
-| **PinchTab** | Go バイナリがローカル（または Docker 内）で実行されている必要あり |
+| **PinchTab** | Go バイナリをローカルか Docker で動かしておく |
 
 ### PinchTab のインストール
 
 ```bash
-# macOS / Linux — 推奨
+# macOS / Linux
 curl -fsSL https://pinchtab.com/install.sh | bash
 
 # Docker
 docker run -d -p 9867:9867 ghcr.io/pinchtab/pinchtab:latest
 ```
 
-> **注意:** `npm install -g pinchtab` は全てのプラットフォームで確実にバイナリをインストールできるわけではありません。インストールスクリプトまたは Docker を使用してください。
+> `npm install -g pinchtab` は環境によってバイナリが入らないことがある。上のスクリプトか Docker を推奨。
 
-> PinchTab の完全なドキュメント: [pinchtab.com/docs](https://pinchtab.com/docs)
+> 公式ドキュメント: [pinchtab.com/docs](https://pinchtab.com/docs)
 
 ---
 
 ## セットアップ
 
-### 1. クローンとビルド
+### 1. クローン & ビルド
 
 ```bash
-git clone https://github.com/domci/pinchtab-mcp.git
+git clone https://github.com/cUDGk/pinchtab-mcp.git
 cd pinchtab-mcp
 npm install
 npm run build
 ```
 
-これにより `src/index.ts` が `dist/index.js` にコンパイルされます。
+`src/index.ts` → `dist/index.js` にコンパイルされる。
 
 ### 2. PinchTab を起動
 
-別のターミナルで実行してください — MCP サーバーを使用する前に PinchTab が起動している必要があります：
+別ターミナルで先に起動しておく:
 
 ```bash
-# 基本
+# そのまま
 pinchtab
 
-# 認証トークン付き（推奨）
+# トークン付き（推奨）
 BRIDGE_TOKEN=my-secret pinchtab
 ```
 
-> **MCP ツールが `Connection failed` を返す場合**、PinchTab が起動していません。上記のように起動してからリトライしてください。
+> MCP ツールが `Connection failed` を返す場合は PinchTab が起動していない。
 
-### 3. クライアントの設定
+### 3. クライアント設定
 
 #### OpenCode
 
-`~/.config/opencode/opencode.json`（グローバル）またはプロジェクトルートの `opencode.json` に追加：
+`~/.config/opencode/opencode.json` かプロジェクトルートの `opencode.json`:
 
 ```jsonc
 {
@@ -100,11 +100,11 @@ BRIDGE_TOKEN=my-secret pinchtab
   "mcp": {
     "pinchtab": {
       "type": "local",
-      "command": ["node", "/absolute/path/to/pinchtab-mcp/dist/index.js"],
+      "command": ["node", "/path/to/pinchtab-mcp/dist/index.js"],
       "enabled": true,
       "environment": {
         "PINCHTAB_URL": "http://localhost:9867",
-        "PINCHTAB_TOKEN": "my-secret"   // 認証トークンが不要な場合は省略
+        "PINCHTAB_TOKEN": "my-secret"
       }
     }
   }
@@ -113,14 +113,14 @@ BRIDGE_TOKEN=my-secret pinchtab
 
 #### Cursor IDE
 
-`~/.cursor/mcp.json`（グローバル）またはプロジェクトルートの `.cursor/mcp.json` に追加：
+`~/.cursor/mcp.json` かプロジェクトルートの `.cursor/mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "pinchtab": {
       "command": "node",
-      "args": ["/absolute/path/to/pinchtab-mcp/dist/index.js"],
+      "args": ["/path/to/pinchtab-mcp/dist/index.js"],
       "env": {
         "PINCHTAB_URL": "http://localhost:9867",
         "PINCHTAB_TOKEN": "my-secret"
@@ -133,14 +133,14 @@ BRIDGE_TOKEN=my-secret pinchtab
 
 #### Claude Desktop
 
-`~/Library/Application Support/Claude/claude_desktop_config.json` に追加：
+`~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "pinchtab": {
       "command": "node",
-      "args": ["/absolute/path/to/pinchtab-mcp/dist/index.js"],
+      "args": ["/path/to/pinchtab-mcp/dist/index.js"],
       "env": {
         "PINCHTAB_URL": "http://localhost:9867"
       }
@@ -155,64 +155,66 @@ BRIDGE_TOKEN=my-secret pinchtab
 
 | 変数 | デフォルト | 説明 |
 |------|-----------|------|
-| `PINCHTAB_URL` | `http://localhost:9867` | 実行中の PinchTab サーバーのベース URL |
-| `PINCHTAB_TOKEN` | *（空）* | Bearer トークン — PinchTab に設定した `BRIDGE_TOKEN` と一致させる必要あり |
-| `PINCHTAB_TIMEOUT` | `30000` | HTTP リクエストのタイムアウト（ミリ秒） |
+| `PINCHTAB_URL` | `http://localhost:9867` | PinchTab のURL |
+| `PINCHTAB_TOKEN` | *(なし)* | PinchTab 側の `BRIDGE_TOKEN` と合わせる |
+| `PINCHTAB_TIMEOUT` | `30000` | リクエストタイムアウト (ms) |
 
 ---
 
-## ツールリファレンス
+## ツール一覧
 
-単一の `pinchtab` ツールが登録されます。すべての操作は `action` パラメータで振り分けられます。
+`pinchtab` という1つのツールに全アクションが集約されている。`action` で振り分け。
 
 ### アクション
 
-| アクション | 説明 | 主要パラメータ |
-|-----------|------|---------------|
-| `navigate` | URL に移動 | `url`, `newTab?`, `blockImages?`, `timeout?` |
-| `snapshot` | 現在のページのアクセシビリティツリー | `filter?`, `format?`, `diff?`, `maxTokens?`, `depth?` |
-| `click` | 要素をクリック | `ref` |
-| `type` | フォーカスされた要素にテキストを入力 | `ref`, `text` |
-| `fill` | 入力欄をクリアして値をセット | `ref`, `text` |
-| `press` | キーを押下 | `ref`, `key`（例: `Enter`, `Tab`） — フォーム送信には送信ボタンの `click` を推奨 |
-| `hover` | 要素にホバー | `ref` |
-| `scroll` | ページをスクロール | `ref?`, `scrollY` |
-| `select` | ドロップダウンのオプションを選択 | `ref`, `value` |
-| `focus` | 要素にフォーカス | `ref` |
-| `text` | ページのテキストを抽出（約800トークン） | `mode?`（`readability`\|`raw`） |
-| `tabs` | タブの一覧表示・開く・閉じる | `tabAction?`（`list`\|`new`\|`close`） |
-| `screenshot` | JPEG スクリーンショットを撮影 | `quality?`（1-100） |
-| `evaluate` | ページ内で JavaScript を実行 | `expression` |
-| `pdf` | ページを PDF として出力 | `landscape?`, `scale?` |
-| `health` | PinchTab の接続状態を確認 | — |
+| アクション | やること | 主なパラメータ |
+|-----------|---------|---------------|
+| `navigate` | URLに遷移 | `url`, `newTab?`, `blockImages?`, `timeout?` |
+| `snapshot` | アクセシビリティツリー取得 | `filter?`, `format?`, `diff?`, `maxTokens?`, `depth?` |
+| `click` | 要素クリック | `ref` |
+| `type` | テキスト入力 | `ref`, `text` |
+| `fill` | 入力欄をクリアして値セット | `ref`, `text` |
+| `press` | キー押下 | `ref`, `key` (例: `Enter`, `Tab`) |
+| `hover` | ホバー | `ref` |
+| `scroll` | スクロール | `ref?`, `scrollY` |
+| `select` | ドロップダウン選択 | `ref`, `value` |
+| `focus` | フォーカス | `ref` |
+| `text` | ページテキスト抽出 | `mode?` (`readability` / `raw`) |
+| `tabs` | タブ操作 | `tabAction?` (`list` / `new` / `close`) |
+| `screenshot` | スクリーンショット (JPEG) | `quality?` (1-100) |
+| `evaluate` | JS実行 | `expression` |
+| `pdf` | PDF出力 | `landscape?`, `scale?` |
+| `health` | 接続確認 | — |
 
-すべてのアクションは、特定のタブを対象にするためのオプション `tabId` を受け付けます。
+全アクションで `tabId` を指定して対象タブを切り替え可能。
 
-### トークン戦略
+> フォーム送信は `press Enter` より送信ボタンの `click` の方が確実。
 
-| シナリオ | 推奨アクション | 概算トークン数 |
-|---------|---------------|---------------|
-| ページ内容の読み取り | `text` | 約800 |
-| インタラクティブ要素の検索 | `snapshot`（`filter=interactive&format=compact`） | 約3,600 |
-| ページ変更の追跡 | `snapshot`（`diff=true`） | 差分のみ |
-| 視覚的な確認 | `screenshot` | 約2,000 |
+### トークン消費の目安
+
+| やりたいこと | 推奨 | トークン目安 |
+|-------------|------|-------------|
+| ページの中身を読む | `text` | ~800 |
+| ボタンやリンクを探す | `snapshot` + `filter=interactive&format=compact` | ~3,600 |
+| 変更差分だけ取る | `snapshot` + `diff=true` | 差分のみ |
+| 見た目を確認 | `screenshot` | ~2,000 |
 
 ---
 
-## プロンプト例
+## 使用例
 
 ```
-https://news.ycombinator.com にアクセスして、トップ10の記事タイトルを抽出して。
+https://news.ycombinator.com を開いてトップ10の記事タイトルを抽出して
 use pinchtab
 ```
 
 ```
-https://example.com/login にアクセスして、ユーザー名とパスワードを入力し、フォームを送信して。
+https://example.com/login でユーザー名とパスワードを入力してログインして
 use pinchtab
 ```
 
 ```
-現在のページのスクリーンショットを撮って。
+今のページのスクショ撮って
 use pinchtab
 ```
 
@@ -221,23 +223,18 @@ use pinchtab
 ## 開発
 
 ```bash
-# 依存関係のインストール
-npm install
-
-# ビルド (TypeScript → dist/)
-npm run build
-
-# 直接実行
-node dist/index.js
+npm install        # 依存インストール
+npm run build      # TypeScript → dist/
+node dist/index.js # 直接実行
 ```
 
-### プロジェクト構成
+### 構成
 
 ```
 pinchtab-mcp/
 ├── src/
-│   └── index.ts       # MCP stdio サーバー — すべてのロジックはここに集約
-├── dist/              # コンパイル出力（git-ignored）
+│   └── index.ts       # 全ロジックここに集約
+├── dist/              # ビルド出力 (gitignore)
 ├── package.json
 └── tsconfig.json
 ```
@@ -246,37 +243,37 @@ pinchtab-mcp/
 
 ## トラブルシューティング
 
-**`Connection failed: fetch failed. Is PinchTab running at http://localhost:9867?`**
-PinchTab バイナリが起動していません。別のターミナルで `pinchtab` を実行してから、リトライしてください。
+**`Connection failed: ... Is PinchTab running at http://localhost:9867?`**
+→ PinchTab が起動していない。別ターミナルで `pinchtab` を実行。
 
-**`npm install -g pinchtab` でインストールしたが `pinchtab` コマンドが見つからない**
-npm パッケージは全てのプラットフォームで Go バイナリをインストールできるわけではありません。代わりにインストールスクリプトを使用してください：
+**`npm install -g pinchtab` したのにコマンドが見つからない**
+→ npm版は環境によってGoバイナリが入らない。インストールスクリプトを使う:
 ```bash
 curl -fsSL https://pinchtab.com/install.sh | bash
 ```
 
-**`press Enter` でフォームが送信されない / ページが遷移しない**
-一部のサイトでは、入力欄のキーボードイベントではなく、送信ボタンのクリックイベントでフォーム送信を処理しています。入力欄での `press Enter` の代わりに、送信ボタンの ref に対して `click` を使用してください。
+**`press Enter` でフォームが送信されない**
+→ サイトによってはボタンのクリックイベントで送信している。送信ボタンの ref を `click` する。
 
-**検索入力欄に `"queryEnter"` が値として表示される**
-これは `press` がフィールドの値にそのまま文字列を追加してしまう場合に発生します。`fill` を使って値を正しくセットしてから、送信ボタンを `click` してください。
+**検索欄に `"queryEnter"` が入る**
+→ `press` が値として追加してしまうケース。`fill` で値をセットしてからボタンを `click`。
 
 ---
 
-## セキュリティに関する注意事項
+## セキュリティ
 
-- **`BRIDGE_TOKEN` / `PINCHTAB_TOKEN`** — 本番環境では必ずトークンを設定し、定期的にローテーションしてください。
-- **`evaluate`** は Chrome 内で任意の JavaScript を実行します — 信頼できるエージェントとドメインのみにアクセスを制限してください。
-- PinchTab を公開インターネットに公開しないでください。`localhost` またはプライベートネットワーク内で使用してください。
+- `BRIDGE_TOKEN` / `PINCHTAB_TOKEN` は本番では必ず設定して定期的にローテーション
+- `evaluate` はページ内で任意JSを実行するので、信頼できるドメインのみで使う
+- PinchTab を外部公開しない。`localhost` かプライベートネットワーク内で
 
 ---
 
 ## ライセンス
 
-MIT — [LICENSE](LICENSE) を参照。
+MIT — [LICENSE](LICENSE)
 
 ---
 
 <p align="center">
-  <a href="https://github.com/pinchtab/pinchtab"><strong>PinchTab</strong></a> をベースに構築 — PinchTab 作者によるプロジェクト / MCP ラッパー: <a href="https://github.com/domci">domci</a>
+  <a href="https://github.com/pinchtab/pinchtab"><strong>PinchTab</strong></a> の MCP ラッパー / 元プロジェクト: <a href="https://github.com/domci">domci</a>
 </p>
